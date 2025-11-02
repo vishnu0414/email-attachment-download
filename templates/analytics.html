@@ -1,0 +1,349 @@
+{% extends 'base.html' %}
+
+{% block title %}Analytics - Gmail Attachment Downloader{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-3">
+        <div class="col">
+            <h2>Analytics Dashboard</h2>
+            <p class="text-muted">Interactive visualization of your Gmail attachments data</p>
+        </div>
+    </div>
+
+    <!-- Top Row - Storage and Types -->
+    <div class="row mb-4">
+        <!-- Storage Gauge -->
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header py-3">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-hdd me-2"></i>Storage Usage
+                    </h5>
+                </div>
+                <div class="card-body d-flex align-items-center justify-content-center">
+                    <canvas id="storageGauge" style="max-height: 200px;"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- File Types Pie -->
+        <div class="col-lg-8 mb-4">
+            <div class="card h-100">
+                <div class="card-header py-3">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-pie-chart me-2"></i>File Types Distribution
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="fileTypesPie" style="max-height: 200px;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Middle Row - Trends -->
+    <div class="row mb-4">
+        <!-- Download Trends Line Chart -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header py-3">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-graph-up me-2"></i>Download Activity (Last 30 Days)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="downloadTrends" style="height: 250px;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Row - Size Distribution and Monthly Stats -->
+    <div class="row">
+        <!-- Size Distribution Bar Chart -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header py-3">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-bar-chart me-2"></i>Size Distribution
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="sizeDistBar" style="height: 250px;"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monthly Stats Area Chart -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header py-3">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-area-chart me-2"></i>Monthly Activity
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="monthlyArea" style="height: 250px;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Load Chart.js and plugins -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+<script>
+Chart.register(ChartDataLabels);
+
+// Color palette
+const colors = {
+    primary: '#4361ee',
+    success: '#2ec4b6',
+    warning: '#ff9f1c',
+    danger: '#e71d36',
+    info: '#4cc9f0',
+    light: '#f8f9fa',
+    dark: '#212529',
+    gradients: {
+        area: ['rgba(67, 97, 238, 0.2)', 'rgba(67, 97, 238, 0)'],
+        bar: ['#4361ee', '#2ec4b6', '#ff9f1c', '#e71d36']
+    }
+};
+
+async function fetchChartData() {
+    const res = await fetch("{{ url_for('api_chart_data') }}");
+    if (!res.ok) throw new Error('Failed to fetch chart data');
+    return res.json();
+}
+
+function initStorageGauge(data) {
+    const totalStorage = 1024 * 1024 * 1024; // 1GB example limit
+    const usedStorage = data.size_distribution.data.reduce((a, b) => a + b, 0);
+    const usagePercent = (usedStorage / totalStorage) * 100;
+
+    new Chart(document.getElementById('storageGauge'), {
+        type: 'doughnut',
+        data: {
+            datasets: [{
+                data: [usagePercent, 100 - usagePercent],
+                backgroundColor: [colors.primary, colors.light],
+                borderWidth: 0,
+                circumference: 180,
+                rotation: 270
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                datalabels: {
+                    formatter: (value, ctx) => {
+                        if (ctx.dataIndex === 0) {
+                            return value.toFixed(1) + '%';
+                        }
+                        return '';
+                    },
+                    color: colors.dark,
+                    font: {
+                        size: 20,
+                        weight: 'bold'
+                    },
+                    anchor: 'center',
+                    align: 'center'
+                },
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (context) => {
+                            if (context.dataIndex === 0) {
+                                return `Used: ${Math.round(usedStorage / 1024 / 1024)}MB`;
+                            }
+                            return `Free: ${Math.round((totalStorage - usedStorage) / 1024 / 1024)}MB`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function initFileTypesPie(data) {
+    new Chart(document.getElementById('fileTypesPie'), {
+        type: 'pie',
+        data: {
+            labels: data.file_types.labels,
+            datasets: [{
+                data: data.file_types.data,
+                backgroundColor: colors.gradients.bar,
+                borderWidth: 2,
+                borderColor: colors.light
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                datalabels: {
+                    formatter: (value, ctx) => {
+                        const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                        const percentage = ((value / total) * 100).toFixed(1) + '%';
+                        return percentage;
+                    },
+                    color: colors.light,
+                    font: { weight: 'bold' }
+                },
+                legend: {
+                    position: 'right',
+                    labels: { 
+                        padding: 20,
+                        usePointStyle: true
+                    }
+                }
+            }
+        }
+    });
+}
+
+function initDownloadTrends(data) {
+    new Chart(document.getElementById('downloadTrends'), {
+        type: 'line',
+        data: {
+            labels: data.download_trends.labels,
+            datasets: [{
+                label: 'Downloads',
+                data: data.download_trends.data,
+                borderColor: colors.primary,
+                tension: 0.4,
+                fill: false,
+                pointBackgroundColor: colors.light,
+                pointBorderColor: colors.primary,
+                pointRadius: 4,
+                pointHoverRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                datalabels: { display: false },
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0,0,0,0.05)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+}
+
+function initSizeDistBar(data) {
+    new Chart(document.getElementById('sizeDistBar'), {
+        type: 'bar',
+        data: {
+            labels: data.size_distribution.labels,
+            datasets: [{
+                data: data.size_distribution.data,
+                backgroundColor: colors.success,
+                borderColor: colors.success,
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                datalabels: {
+                    anchor: 'end',
+                    align: 'top',
+                    formatter: Math.round,
+                    font: { weight: 'bold' }
+                },
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0,0,0,0.05)'
+                    }
+                },
+                x: {
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+}
+
+function initMonthlyArea(data) {
+    // Convert weekly data to monthly by aggregating
+    const monthlyData = data.download_trends.data.reduce((acc, val, i) => {
+        const weekNum = Math.floor(i / 4);
+        acc[weekNum] = (acc[weekNum] || 0) + val;
+        return acc;
+    }, []);
+
+    new Chart(document.getElementById('monthlyArea'), {
+        type: 'line',
+        data: {
+            labels: ['Month 1', 'Month 2', 'Month 3'],
+            datasets: [{
+                label: 'Activity',
+                data: monthlyData,
+                borderColor: colors.warning,
+                backgroundColor: colors.gradients.area,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                datalabels: { display: false },
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0,0,0,0.05)'
+                    }
+                },
+                x: {
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+}
+
+// Initialize all charts
+fetchChartData().then(data => {
+    initStorageGauge(data);
+    initFileTypesPie(data);
+    initDownloadTrends(data);
+    initSizeDistBar(data);
+    initMonthlyArea(data);
+}).catch(err => {
+    console.error('Failed to load analytics:', err);
+    document.querySelectorAll('canvas').forEach(canvas => {
+        canvas.parentNode.innerHTML = '<div class="alert alert-danger">Failed to load chart data</div>';
+    });
+});
+</script>
+{% endblock %}

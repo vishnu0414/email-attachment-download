@@ -1,0 +1,39 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Virtual environments
+.venv
+venv/
+ENV/
+
+# Flask
+instance/
+.webassets-cache
+
+# Gmail credentials
+credentials.json
+token.pickle
+token.json
+
+# Static files
+static/attachments/*
+!static/attachments/.gitkeep
+
+# Database
+*.db
+*.sqlite
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

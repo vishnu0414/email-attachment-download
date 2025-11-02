@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Gmail Attachment Downloader{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Welcome Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h3 mb-3">
+                <i class="bi bi-speedometer2 me-2"></i>Welcome back, {{ current_user.name }}!
+            </h1>
+        </div>
+    </div>
+
+    <!-- Charts section removed -->
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4 g-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h5 class="card-title">Total Files</h5>
+                            <h2 class="mb-0">{{ stats.total_attachments }}</h2>
+                        </div>
+                        <i class="bi bi-file-earmark display-4 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h5 class="card-title">Total Size</h5>
+                            <h2 class="mb-0">{{ stats.total_size }}</h2>
+                        </div>
+                        <i class="bi bi-hdd display-4 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h5 class="card-title">Recent Downloads</h5>
+                            <h2 class="mb-0">{{ stats.recent_count }}</h2>
+                        </div>
+                        <i class="bi bi-download display-4 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card {% if stats.gmail_connected %}bg-success{% else %}bg-warning{% endif %} text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h5 class="card-title">Gmail Status</h5>
+                            <h6 class="mb-0">
+                                {% if stats.gmail_connected %}
+                                    <i class="bi bi-check-circle me-1"></i>Connected
+                                {% else %}
+                                    <i class="bi bi-exclamation-triangle me-1"></i>Not Connected
+                                {% endif %}
+                            </h6>
+                        </div>
+                        <i class="bi bi-google display-4 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-lightning me-2"></i>Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            {% if stats.gmail_connected %}
+                            <a href="{{ url_for('disconnect_gmail') }}" class="btn btn-warning w-100" onclick="return confirm('Are you sure you want to disconnect your Gmail account?')">
+                                <i class="bi bi-google me-2"></i>Disconnect Gmail
+                            </a>
+                            {% else %}
+                            <a href="{{ url_for('gmail_connect') }}" class="btn btn-primary w-100">
+                                <i class="bi bi-google me-2"></i>Connect Gmail
+                            </a>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{{ url_for('history') }}" class="btn btn-outline-primary w-100">
+                                <i class="bi bi-clock-history me-2"></i>View History
+                            </a>
+                        </div>
+                        {% if stats.total_attachments > 0 %}
+                        <div class="col-md-3">
+                            <a href="{{ url_for('download_zip') }}" class="btn btn-success w-100">
+                                <i class="bi bi-file-zip me-2"></i>Download All
+                            </a>
+                        </div>
+                        {% endif %}
+                        <div class="col-md-3">
+                            <button class="btn btn-outline-secondary w-100" data-bs-toggle="modal" data-bs-target="#helpModal">
+                                <i class="bi bi-question-circle me-2"></i>Help
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Attachments -->
+    {% if recent_attachments %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-clock me-2"></i>Recent Downloads
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>File</th>
+                                    <th>From</th>
+                                    <th>Subject</th>
+                                    <th>Size</th>
+                                    <th>Downloaded</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for attachment in recent_attachments %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-file-earmark me-2 text-primary"></i>
+                                            <div>
+                                                <div class="fw-medium">{{ attachment.filename }}</div>
+                                                <small class="text-muted">{{ attachment.filetype|upper }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>{{ attachment.email_from or 'Unknown' }}</td>
+                                    <td>
+                                        <span class="text-truncate d-inline-block" style="max-width: 200px;" 
+                                              data-bs-toggle="tooltip" title="{{ attachment.subject or 'No Subject' }}">
+                                            {{ attachment.subject or 'No Subject' }}
+                                        </span>
+                                    </td>
+                                    <td>{{ attachment.formatted_size }}</td>
+                                    <td>{{ attachment.created_at.strftime('%b %d, %Y') }}</td>
+                                    <td>
+                                        <a href="{{ url_for('download', attach_id=attachment.id) }}" 
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-download"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {% if stats.total_attachments > 5 %}
+                    <div class="text-center mt-3">
+                        <a href="{{ url_for('history') }}" class="btn btn-outline-primary">
+                            View All {{ stats.total_attachments }} Files
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- Empty State -->
+    <div class="row">
+        <div class="col-12">
+            <div class="text-center py-5">
+                <i class="bi bi-inbox display-1 text-muted mb-4"></i>
+                <h3>No Attachments Yet</h3>
+                <p class="text-muted mb-4">Connect your Gmail account to start downloading attachments.</p>
+                <a href="{{ url_for('gmail_connect') }}" class="btn btn-primary btn-lg">
+                    <i class="bi bi-google me-2"></i>Connect Gmail Account
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Help Modal -->
+<div class="modal fade" id="helpModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-question-circle me-2"></i>Help & Getting Started
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Getting Started</h6>
+                        <ol>
+                            <li>Connect your Gmail account using OAuth2</li>
+                            <li>Use advanced search to find emails with attachments</li>
+                            <li>Download individual files or bulk ZIP archives</li>
+                            <li>Manage your downloads in the History section</li>
+                        </ol>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Search Examples</h6>
+                        <ul class="list-unstyled">
+                            <li><code>has:attachment from:example@gmail.com</code></li>
+                            <li><code>has:attachment filename:pdf</code></li>
+                            <li><code>has:attachment newer_than:7d</code></li>
+                            <li><code>has:attachment larger:5M</code></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="{{ url_for('gmail_connect') }}" class="btn btn-primary">Connect Gmail</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{% endblock %}

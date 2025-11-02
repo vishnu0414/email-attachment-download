@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block title %}Download History - Gmail Attachment Downloader{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-clock-history me-2"></i>Download History</h2>
+                {% if attachments.items %}
+                <a href="{{ url_for('download_zip') }}" class="btn btn-success">
+                    <i class="bi bi-file-earmark-zip me-2"></i>Download All as ZIP
+                </a>
+                {% endif %}
+            </div>
+            
+            <!-- Search and Filter -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-6">
+                            <label for="search" class="form-label">Search</label>
+                            <input type="text" class="form-control" id="search" name="search" 
+                                   value="{{ search }}" placeholder="Filename, subject, or sender...">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="type" class="form-label">File Type</label>
+                            <select class="form-select" id="type" name="type">
+                                <option value="">All Types</option>
+                                {% for file_type in file_types %}
+                                <option value="{{ file_type }}" {% if current_type == file_type %}selected{% endif %}>
+                                    {{ file_type.upper() }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-search me-1"></i>Filter
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Attachments List -->
+            {% if attachments.items %}
+                <div class="card">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Filename</th>
+                                        <th>Subject</th>
+                                        <th>Sender</th>
+                                        <th>Size</th>
+                                        <th>Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for attachment in attachments.items %}
+                                    <tr>
+                                        <td>
+                                            <i class="bi bi-file-earmark me-2"></i>
+                                            {{ attachment.filename }}
+                                        </td>
+                                        <td class="text-truncate" style="max-width: 200px;">
+                                            {{ attachment.subject or 'No Subject' }}
+                                        </td>
+                                        <td class="text-truncate" style="max-width: 150px;">
+                                            {{ attachment.email_from }}
+                                        </td>
+                                        <td>{{ attachment.size | filesizeformat }}</td>
+                                        <td>{{ attachment.created_at.strftime('%b %d, %Y') }}</td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <a href="{{ url_for('preview', attach_id=attachment.id) }}"
+                                                   class="btn btn-sm btn-outline-info" title="Preview" target="_blank">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                                <a href="{{ url_for('download', attach_id=attachment.id) }}"
+                                                   class="btn btn-sm btn-outline-primary" title="Download">
+                                                    <i class="bi bi-download"></i>
+                                                </a>
+                                                <form method="post" action="{{ url_for('delete', attach_id=attachment.id) }}"
+                                                      class="d-inline"
+                                                      onsubmit="return confirm('Are you sure you want to delete this attachment?');">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Pagination -->
+                {% if attachments.pages > 1 %}
+                <nav class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% if attachments.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('history', page=attachments.prev_num, search=search, type=current_type) }}">
+                                Previous
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Previous</span>
+                        </li>
+                        {% endif %}
+                        
+                        {% for page_num in attachments.iter_pages() %}
+                            {% if page_num %}
+                                {% if page_num == attachments.page %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ page_num }}</span>
+                                </li>
+                                {% else %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('history', page=page_num, search=search, type=current_type) }}">
+                                        {{ page_num }}
+                                    </a>
+                                </li>
+                                {% endif %}
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">...</span>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if attachments.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('history', page=attachments.next_num, search=search, type=current_type) }}">
+                                Next
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Next</span>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+                
+            {% else %}
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                        <h4 class="mt-3 text-muted">No Attachments Found</h4>
+                        <p class="text-muted">You haven't downloaded any attachments yet.</p>
+                        <a href="{{ url_for('gmail_connect') }}" class="btn btn-primary">
+                            <i class="bi bi-google me-2"></i>Connect Gmail & Download
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

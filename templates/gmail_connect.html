@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Connect Gmail - Gmail Attachment Downloader{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="mb-0">
+                        <i class="bi bi-google me-2"></i>Connect Gmail Account
+                    </h2>
+                </div>
+                <div class="card-body">
+                    {% if session.get('gmail_authenticated') %}
+                        <div class="alert alert-success">
+                            <i class="bi bi-check-circle-fill me-2"></i>
+                            Gmail account connected successfully!
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h5>Download Gmail Attachments</h5>
+                            <p class="text-muted">Search and download attachments from your Gmail messages.</p>
+                        </div>
+                        
+                        <form method="post" class="mb-4">
+                            <div class="row g-3">
+                                <div class="col-md-8">
+                                    <label for="query" class="form-label">Search Query</label>
+                                    <input type="text" class="form-control" id="query" name="query" 
+                                           value="has:attachment" placeholder="e.g., has:attachment, from:sender@example.com" required>
+                                    <div class="form-text">Use Gmail search operators to filter messages</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="max_results" class="form-label">Max Results</label>
+                                    <select class="form-select" id="max_results" name="max_results">
+                                        <option value="10">10 messages</option>
+                                        <option value="25">25 messages</option>
+                                        <option value="50" selected>50 messages</option>
+                                        <option value="100">100 messages</option>
+                                        <option value="500">500 messages</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="date_filter" class="form-label">Date Filter (Optional)</label>
+                                    <input type="date" class="form-control" id="date_filter" name="date_filter">
+                                    <div class="form-text">Download attachments from messages after this date</div>
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-download me-2"></i>Search & Download Attachments
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                        
+                        <div class="alert alert-info">
+                            <h6><i class="bi bi-info-circle me-2"></i>Gmail Search Tips:</h6>
+                            <ul class="mb-0">
+                                <li><code>has:attachment</code> - Messages with attachments</li>
+                                <li><code>from:sender@example.com</code> - From specific sender</li>
+                                <li><code>subject:invoice</code> - Messages with specific subject</li>
+                                <li><code>larger:1M</code> - Messages larger than 1MB</li>
+                                <li><code>after:2024/01/01</code> - Messages after specific date</li>
+                            </ul>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-google text-danger" style="font-size: 4rem;"></i>
+                            <h4 class="mt-3">Gmail Not Connected</h4>
+                            <p class="text-muted">You need to connect your Gmail account to download attachments.</p>
+                            <a href="{{ url_for('gmail_auth') }}" class="btn btn-danger btn-lg">
+                                <i class="bi bi-google me-2"></i>Connect Gmail Account
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
